@@ -1,5 +1,5 @@
 const PRESETS = [1, 1.5, 2, 3, 4, 6, 8, 10, 16];
-const SEEK_PRESETS = [10, 25, 50, 75];
+const SEEK_PRESETS = [10, 25, 50, 75,93];
 const STORAGE_KEY = "csb_speed";
 
 const slider = document.getElementById("speedSlider");

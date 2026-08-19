@@ -1,6 +1,6 @@
 const MUTE_ABOVE = 4;
 const PRESETS = [1, 1.5, 2, 3, 4, 6, 8, 10, 16];
-const SEEK_PRESETS = [10, 25, 50, 75];
+const SEEK_PRESETS = [10, 25, 50, 75, 93];
 const STORAGE_KEY = "csb_speed";
 const POS_KEY = "csb_overlay_pos";
 const AUTO_ADVANCE_KEY = "csb_auto_advance";
