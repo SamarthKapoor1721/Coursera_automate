@@ -4,10 +4,13 @@ const SEEK_PRESETS = [10, 25, 50, 75, 93];
 const STORAGE_KEY = "csb_speed";
 const POS_KEY = "csb_overlay_pos";
 const AUTO_ADVANCE_KEY = "csb_auto_advance";
+const SEEK_PERCENT_KEY = "csb_seek_percent";
 
 let currentSpeed = 1;
 let autoAdvance = false;
 let overlayClosed = false;
+let savedSeekPercent = null;
+let seekAppliedForVideo = new WeakSet();
 
 function applyToVideo(video) {
   if (!video || video.readyState < 1) return;
@@ -17,6 +20,20 @@ function applyToVideo(video) {
     video.defaultPlaybackRate = currentSpeed;
   } catch (err) {
     // Coursera's player may briefly own the video element during init; ignore transient failures.
+  }
+
+  if (
+    savedSeekPercent !== null &&
+    !seekAppliedForVideo.has(video) &&
+    video.duration &&
+    isFinite(video.duration)
+  ) {
+    seekAppliedForVideo.add(video);
+    try {
+      video.currentTime = video.duration * (savedSeekPercent / 100);
+    } catch (err) {
+      // ignore transient failures during player init
+    }
   }
 }
 
@@ -54,9 +71,10 @@ function setSpeed(speed) {
   applyToAllVideos();
 }
 
-chrome.storage.sync.get([STORAGE_KEY, AUTO_ADVANCE_KEY], (result) => {
+chrome.storage.sync.get([STORAGE_KEY, AUTO_ADVANCE_KEY, SEEK_PERCENT_KEY], (result) => {
   currentSpeed = result[STORAGE_KEY] || 1;
   autoAdvance = Boolean(result[AUTO_ADVANCE_KEY]);
+  savedSeekPercent = typeof result[SEEK_PERCENT_KEY] === "number" ? result[SEEK_PERCENT_KEY] : null;
   applyToAllVideos();
   observeVideos();
   observeVideoEnd();
@@ -69,20 +87,25 @@ chrome.storage.onChanged.addListener((changes) => {
   }
 });
 
-function seekToPercent(percent) {
+function seekToPercent(percent, persist = true) {
   document.querySelectorAll("video").forEach((video) => {
     if (video.readyState < 1 || !video.duration || !isFinite(video.duration)) return;
     try {
       video.currentTime = video.duration * (percent / 100);
+      seekAppliedForVideo.add(video);
     } catch (err) {
       // ignore transient failures during player init
     }
   });
+  if (persist) {
+    savedSeekPercent = percent;
+    chrome.storage.sync.set({ [SEEK_PERCENT_KEY]: percent });
+  }
 }
 
 function findNextButton() {
   const candidates = document.querySelectorAll(
-    'a[data-testid="rc-WeekItemNext"], a[aria-label*="Next" i], button[aria-label*="Next" i]'
+    '[data-testid="next-item"], a[aria-label*="Next" i], button[aria-label*="Next" i]'
   );
   for (const el of candidates) {
     if (el.offsetParent !== null) return el;
@@ -204,8 +227,12 @@ function buildOverlay() {
   SEEK_PRESETS.forEach((percent) => {
     const btn = document.createElement("button");
     btn.textContent = `${percent}%`;
+    btn.dataset.percent = percent;
     btn.style.cssText = btnStyle();
-    btn.addEventListener("click", () => seekToPercent(percent));
+    btn.addEventListener("click", () => {
+      seekToPercent(percent);
+      refreshSeekActive();
+    });
     seekRow.appendChild(btn);
   });
   box.appendChild(seekRow);
@@ -237,9 +264,18 @@ function buildOverlay() {
       btn.style.borderColor = active ? "#0056d2" : "rgba(255,255,255,0.2)";
     });
   }
+  function refreshSeekActive() {
+    seekRow.querySelectorAll("button").forEach((btn) => {
+      const active = Number(btn.dataset.percent) === savedSeekPercent;
+      btn.style.background = active ? "#0056d2" : "rgba(255,255,255,0.08)";
+      btn.style.borderColor = active ? "#0056d2" : "rgba(255,255,255,0.2)";
+    });
+  }
   refreshActive();
+  refreshSeekActive();
   chrome.storage.onChanged.addListener((changes) => {
     if (changes[STORAGE_KEY]) refreshActive();
+    if (changes[SEEK_PERCENT_KEY]) refreshSeekActive();
   });
 
   makeDraggable(box, handle);
