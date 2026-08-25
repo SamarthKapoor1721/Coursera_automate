@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Coursera Speed Boost",
-  "version": "1.0.0",
-  "description": "Play Coursera lecture videos up to 16x speed, with auto-mute above 4x since speech becomes unintelligible past that point.",
+  "name": "Coursera Skippy",
+  "version": "1.1.0",
+  "description": "Play Coursera lecture videos up to 16x speed, seek, auto-advance videos and reading pages, and skip items.",
   "permissions": ["storage"],
   "host_permissions": ["*://*.coursera.org/*"],
   "background": {
@@ -18,12 +18,16 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Coursera Speed Boost"
+    "default_title": "Coursera Skippy"
   },
   "commands": {
     "cycle-speed": {
       "suggested_key": { "default": "Alt+S", "mac": "Command+Shift+S" },
       "description": "Cycle playback speed preset"
+    },
+    "next-item": {
+      "suggested_key": { "default": "Alt+N", "mac": "Command+Shift+N" },
+      "description": "Mark complete & Go to next item"
     }
   },
   "icons": {
